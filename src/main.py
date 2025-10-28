@@ -1,8 +1,3 @@
-"""
-Chatbot RAG (Retrieval-Augmented Generation) usando Ollama e FAISS
-Versão compatível com LlamaIndex 0.10.12 - CORRIGIDO
-"""
-
 import sys
 from pathlib import Path
 from typing import List

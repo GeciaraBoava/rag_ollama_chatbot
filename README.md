@@ -79,7 +79,7 @@ Coloque arquivos (.txt, .pdf, .docx, etc.) na pasta `documentos/`
 ### 2. Execute o chatbot
 
 ```bash
-python src/chatbot_rag.py
+python src/main.py
 ```
 
 ### 3. Faça perguntas
@@ -189,7 +189,7 @@ python3 -m venv venv
 
 # Ativa ambiente
 echo "✅ Ativando ambiente virtual..."
-source venv/bin/activate
+source .venv/bin/activate
 
 # Instala dependências
 echo "📥 Instalando dependências..."
