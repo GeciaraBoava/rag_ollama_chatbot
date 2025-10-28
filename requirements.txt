@@ -1,27 +1,44 @@
-# requirements.txt ATUALIZADO E COMPATÍVEL
-llama-index-core==0.10.12
-llama-index-embeddings-huggingface==0.1.4
-llama-index-llms-ollama==0.1.4
-llama-index-vector-stores-faiss==0.1.2
-llama-index-readers-file==0.1.22
+# ============================================
+# RAG Chatbot - Dependências Atualizadas
+# Compatível com Python 3.11.9
+# LlamaIndex 0.12.x (mais recente estável)
+# ============================================
 
-# Ollama
-ollama==0.1.7
+# Núcleo LlamaIndex (versão mais recente)
+llama-index==0.12.8
+llama-index-core==0.12.8
+llama-index-embeddings-huggingface==0.4.0
+llama-index-llms-ollama==0.4.4
+llama-index-vector-stores-faiss==0.3.0
 
-# Embeddings e Modelos
-sentence-transformers==3.0.0
-transformers==4.37.2
-torch==2.1.2
+# Ollama (cliente Python atualizado)
+ollama==0.4.4
 
-# FAISS
-faiss-cpu==1.7.4
+# Embeddings e Modelos (versões atualizadas para Python 3.11.9)
+sentence-transformers==3.3.1
+transformers==4.48.0
+torch==2.5.1
+safetensors==0.4.5
 
-# PDF e DOCX
-pypdf==4.2.0
-python-docx==1.1.0
+# FAISS (busca vetorial)
+faiss-cpu==1.9.0.post1
 
-# Utilitários
-numpy==1.24.3
-python-dotenv==1.0.0
-nltk==3.8.1
-tiktoken==0.5.1
+# Manipulação de documentos
+pypdf==5.1.0
+python-docx==1.1.2
+
+# Utilitários gerais
+numpy==1.26.4
+python-dotenv==1.0.1
+nltk==3.9.1
+tiktoken==0.8.0
+requests==2.32.3
+
+# Dependências adicionais para compatibilidade
+huggingface-hub==0.26.5
+tokenizers==0.21.0
+
+# ============================================
+# Instalação:
+# pip install -r requirements.txt
+# ============================================
