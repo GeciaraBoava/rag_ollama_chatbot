@@ -12,17 +12,17 @@ from llama_index.core import VectorStoreIndex, Document, Settings
 from llama_index.core.storage.storage_context import StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.faiss import FaissVectorStore
-from llama_index.llms.ollama import Ollama  # Import correto
+from llama_index.llms.ollama import Ollama 
 
 import faiss
-from docx import Document as DocxDocument  # Correção do import
+from docx import Document as DocxDocument
 from pypdf import PdfReader
 import requests
 
 # Constantes
 DEFAULT_DOCUMENTS_FOLDER = "documentos"
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-OLLAMA_MODEL_NAME = "deepseek-coder"
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2" # entende o texto e o transforma em vetores pra busca (um modelo da biblioteca Sentence-Transformers (HuggingFace))
+OLLAMA_MODEL_NAME = "deepseek-coder" # gera a resposta usando o contexto recuperado (modelo carregado no Ollama)
 EXIT_COMMANDS = ["sair", "exit", "quit"]
 
 def check_ollama_running():
@@ -49,10 +49,10 @@ def load_documents(folder_path: str) -> List[Document]:
             if file.suffix.lower() == ".txt":
                 content = file.read_text(encoding="utf-8")
             elif file.suffix.lower() == ".docx":
-                doc = DocxDocument(str(file))  # Correção: usar str() no Path
+                doc = DocxDocument(str(file))  
                 content = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
             elif file.suffix.lower() == ".pdf":
-                reader = PdfReader(str(file))  # Correção: usar str() no Path
+                reader = PdfReader(str(file))  
                 content = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
             else:
                 print(f"⚠️ Ignorando arquivo não suportado: {file.name}")

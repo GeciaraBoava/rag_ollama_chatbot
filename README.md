@@ -2,9 +2,6 @@
 
 Sistema de chatbot com Retrieval-Augmented Generation (RAG) que permite fazer perguntas sobre documentos locais usando IA.
 
-**Idealizado por:** Diego Alves  
-**Criado por:** Geciara Boava
-
 ---
 
 ## 🎯 Características
@@ -234,8 +231,3 @@ echo "  3. python src/chatbot_rag.py"
 - **Perguntas específicas** = respostas mais precisas
 - **Múltiplos arquivos** = contexto mais rico
 - **Organize por tema** = melhor organização
-=======
-# rag_ollama_chatbot
-Chatbot que busca somente em arquivos selecionados
->>>>>>> 308ceef25b90c1acadc65aebc6107683e6f7287e
->>>>>>> 08bbfdc39f5b5aa69bcda762538c168a851951f8
