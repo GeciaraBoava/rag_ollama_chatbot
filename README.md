@@ -1,233 +1,263 @@
-# 🤖 Chatbot RAG com Ollama e FAISS
+# RAG Chatbot com Ollama e LlamaIndex
 
-Sistema de chatbot com Retrieval-Augmented Generation (RAG) que permite fazer perguntas sobre documentos locais usando IA.
+Sistema de chatbot inteligente baseado em RAG (Retrieval-Augmented Generation) que permite consultar documentos locais utilizando modelos de linguagem via Ollama.
 
----
+## 📋 Características
 
-## 🎯 Características
+- **Processamento local**: Todos os dados permanecem na sua máquina
+- **Múltiplos formatos**: Suporta PDF, DOCX e TXT
+- **Alta performance**: Otimizado para respostas rápidas (2-8s)
+- **Persistência**: Índice vetorial salvo para reutilização
+- **Interface CLI**: Interação via terminal
 
-- 📚 Carrega documentos de uma pasta local
-- 🔍 Busca semântica usando FAISS
-- 🤖 Modelo de linguagem local via Ollama (DeepSeek)
-- 🔒 100% local - seus dados não saem do computador
-- 💬 Interface de chat interativa
+## 🔧 Requisitos
 
----
+### Software necessário
 
-## 🛠️ Pré-requisitos
+- **Python 3.11.9** (ou superior)
+- **Ollama** instalado e configurado
+- **Git** (opcional, para clonar o repositório)
 
-### 1. Python 3.8 ou superior
+### Instalação do Ollama
 
-Verifique sua versão:
+#### Windows/Mac/Linux
 ```bash
-python --version
+# Acesse: https://ollama.ai/download
+# Ou use o instalador oficial para seu sistema operacional
 ```
 
-### 2. Ollama instalado
-
-Instale o Ollama: https://ollama.ai/download
-
-Baixe o modelo DeepSeek:
+Após instalar, inicie o servidor:
 ```bash
-ollama pull deepseek-coder
+ollama serve
 ```
 
----
+## 🚀 Instalação
 
-## 📦 Instalação
-
-### Linux/Mac
-
+### 1. Clone o repositório
 ```bash
-# Clone ou baixe o projeto
-cd chatbot-rag
-
-# Crie ambiente virtual
-python -m venv venv
-
-# Ative o ambiente
-source venv/bin/activate
-
-# Instale dependências
-pip install -r requirements.txt
+git clone <url-do-repositorio>
+cd rag_ollama_chatbot
 ```
 
-### Windows
-
-```cmd
-# Clone ou baixe o projeto
-cd chatbot-rag
-
-# Crie ambiente virtual
-python -m venv venv
-
-# Ative o ambiente
-venv\Scripts\activate
-
-# Instale dependências
-pip install -r requirements.txt
+### 2. Estrutura de pastas
+Crie a pasta para seus documentos:
+```bash
+mkdir documentos
 ```
 
----
+A estrutura final deve ser:
+```
+rag_ollama_chatbot/
+├── src/
+│   └── main.py
+├── documentos/          # Seus arquivos PDF, DOCX, TXT
+├── requirements.txt
+├── setup.py
+└── README.md
+```
 
-## 🚀 Uso
-
-### 1. Adicione seus documentos
-
-Coloque arquivos (.txt, .pdf, .docx, etc.) na pasta `documentos/`
-
-### 2. Execute o chatbot
+### 3. Configure o ambiente
+Execute o script de setup que criará o ambiente virtual e instalará as dependências:
 
 ```bash
-python src/main.py
+python setup.py
 ```
 
-### 3. Faça perguntas
+O script irá:
+- Criar ambiente virtual (`.venv`)
+- Instalar todas as dependências
+- Verificar se o Ollama está ativo
+- Baixar o modelo `llama3.2:3b` automaticamente (primeira execução)
 
+## 📚 Preparação dos Documentos
+
+1. Adicione seus documentos na pasta `documentos/`
+2. Formatos suportados: `.pdf`, `.docx`, `.txt`
+3. Não há limite de quantidade, mas mais documentos = mais tempo de indexação inicial
+
+Exemplo:
 ```
-Você: Qual o tema principal dos documentos?
-🤖 Bot: [Resposta baseada nos documentos]
+documentos/
+├── manual_tecnico.pdf
+├── relatorio_2024.docx
+├── notas.txt
+└── apresentacao.pdf
+```
+
+## 💬 Uso
+
+### Iniciar o chatbot
+```bash
+python setup.py
+```
+
+### Comandos disponíveis
+- Digite sua pergunta e pressione Enter
+- `sair`, `exit` ou `quit` para encerrar
+- `Ctrl+C` para interromper
+
+### Exemplo de interação
+```
+🤖 Chatbot RAG — digite sua pergunta
+========================================
+
+Você: Qual o conteúdo principal do manual técnico?
+🔍 Processando...
+
+🤖 Bot: O manual técnico aborda os seguintes tópicos principais:
+1. Instalação do sistema
+2. Configuração inicial
+3. Manutenção preventiva
+⏱️  Tempo: 4.23s
 
 Você: sair
-👋 Encerrando chatbot. Até logo!
+👋 Encerrando.
 ```
 
----
+## 🔄 Reconstruir Índice
 
-## 📝 Formatos Suportados
+Se você adicionar, remover ou modificar documentos, reconstrua o índice:
 
-- `.txt` - Arquivos de texto
-- `.pdf` - Documentos PDF
-- `.docx` - Documentos Word
-- `.md` - Markdown
-- E outros formatos compatíveis com LlamaIndex
-
----
-
-## 🔧 Personalização
-
-### Trocar o modelo de IA
-
-Edite em `chatbot_rag.py`:
-
-```python
-OLLAMA_MODEL_NAME = "llama2"  # ou outro modelo
-```
-
-Modelos disponíveis: https://ollama.ai/library
-
-### Trocar modelo de embeddings
-
-```python
-EMBEDDING_MODEL_NAME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-```
-
----
-
-## ⚠️ Solução de Problemas
-
-### Erro: "Ollama not found"
 ```bash
-# Verifique se o Ollama está rodando
-ollama list
+python setup.py --rebuild
 ```
 
-### Erro: "Pasta documentos vazia"
-- Adicione pelo menos um arquivo na pasta `documentos/`
+Isso irá:
+- Remover índice FAISS antigo
+- Limpar cache de embeddings
+- Reprocessar todos os documentos
 
-### Erro de memória
-- Use documentos menores
-- Ou considere `faiss-gpu` se tiver GPU NVIDIA
+## ⚙️ Configurações Avançadas
 
----
+### Alterar modelo LLM
 
-## 📚 Tecnologias
+Edite `src/main.py` e modifique:
+```python
+OLLAMA_MODEL_NAME = "llama3.2:3b"  # Modelo padrão (rápido)
+```
 
-- **LlamaIndex** - Framework RAG
-- **LangChain** - Integração com LLMs
-- **FAISS** - Busca vetorial eficiente
-- **Ollama** - Modelos locais de IA
-- **HuggingFace** - Modelos de embeddings
+Outros modelos disponíveis:
+```bash
+ollama pull qwen2.5:3b    # Alternativa rápida
+ollama pull phi3:mini     # Ultra compacto
+ollama pull llama3.2:1b   # Mais rápido (menos preciso)
+```
 
----
+### Ajustar parâmetros de busca
 
-## 📄 Licença
+Em `src/main.py`:
+```python
+CHUNK_SIZE = 256          # Tamanho dos chunks de texto
+SIMILARITY_TOP_K = 2      # Quantidade de chunks recuperados
+MAX_TOKENS = 512          # Tamanho máximo da resposta
+```
 
-Este projeto é de código aberto. Use livremente!
+### Usar GPU (se disponível)
 
----
+Modifique o embedding model:
+```python
+embed_model = HuggingFaceEmbedding(
+    model_name=EMBEDDING_MODEL_NAME,
+    device="cuda",  # Usar GPU
+    cache_folder="./.cache/embeddings"
+)
+```
+
+## 📊 Performance
+
+| Cenário | Tempo Esperado |
+|---------|----------------|
+| Primeira indexação | 30s - 2min (depende da quantidade de documentos) |
+| Carregamento de índice existente | 2-5s |
+| Resposta a pergunta | 3-8s |
+
+## 🐛 Solução de Problemas
+
+### Erro: "Ollama não está ativo"
+```bash
+# Inicie o servidor Ollama
+ollama serve
+```
+
+### Erro: "Modelo não encontrado"
+```bash
+# Baixe o modelo manualmente
+ollama pull llama3.2:3b
+```
+
+### Erro: "ImportError: cannot import name..."
+```bash
+# Reinstale as dependências
+python setup.py
+```
+
+### Respostas lentas
+- Use um modelo menor: `llama3.2:1b`
+- Reduza `SIMILARITY_TOP_K` para 1
+- Verifique se há muitos documentos (considere dividir em categorias)
+
+### Pasta `documentos/` vazia
+```bash
+# O sistema irá gerar erro. Adicione pelo menos um documento antes de executar
+```
+
+## 🏗️ Arquitetura
+
+```
+┌─────────────────┐
+│   Documentos    │
+│  (PDF/DOCX/TXT) │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Processamento  │
+│  (Chunking +    │
+│   Embeddings)   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  FAISS Vector   │
+│     Store       │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────┐
+│  Query Engine   │────▶│   Ollama    │
+│  (Retrieval)    │     │    LLM      │
+└─────────────────┘     └─────────────┘
+         │
+         ▼
+┌─────────────────┐
+│    Resposta     │
+└─────────────────┘
+```
+
+## 📦 Dependências Principais
+
+- **llama-index**: Framework RAG
+- **ollama**: Cliente Python para Ollama
+- **faiss-cpu**: Busca vetorial eficiente
+- **sentence-transformers**: Geração de embeddings
+- **pypdf/python-docx**: Leitura de documentos
+
+## 📝 Licença
+
+Este projeto é fornecido como está, sem garantias. Use por sua conta e risco.
 
 ## 🤝 Contribuições
 
-Sugestões e melhorias são bem-vindas!
-```
+Sugestões e melhorias são bem-vindas. Abra uma issue ou pull request.
+
+## 📧 Suporte
+
+Para problemas técnicos:
+1. Verifique a seção "Solução de Problemas"
+2. Consulte a documentação do Ollama: https://ollama.ai/docs
+3. Consulte a documentação do LlamaIndex: https://docs.llamaindex.ai
 
 ---
 
-## 📄 Arquivo: `setup.sh` (Linux/Mac)
-
-```bash
-#!/bin/bash
-
-echo "🚀 Configurando Chatbot RAG..."
-
-# Verifica Python
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 não encontrado. Instale antes de continuar."
-    exit 1
-fi
-
-# Verifica Ollama
-if ! command -v ollama &> /dev/null; then
-    echo "❌ Ollama não encontrado. Instale em: https://ollama.ai/download"
-    exit 1
-fi
-
-# Cria ambiente virtual
-echo "📦 Criando ambiente virtual..."
-python3 -m venv venv
-
-# Ativa ambiente
-echo "✅ Ativando ambiente virtual..."
-source .venv/bin/activate
-
-# Instala dependências
-echo "📥 Instalando dependências..."
-pip install --upgrade pip
-pip install -r requirements.txt
-
-# Cria pasta documentos
-mkdir -p documentos
-touch documentos/.gitkeep
-
-# Baixa modelo Ollama
-echo "🤖 Baixando modelo DeepSeek..."
-ollama pull deepseek-coder
-
-echo ""
-echo "✅ Instalação concluída!"
-echo ""
-echo "Para usar:"
-echo "  1. source venv/bin/activate"
-echo "  2. Adicione documentos na pasta 'documentos/'"
-echo "  3. python src/chatbot_rag.py"
-```
-
----
-
-## 🎯 Próximos Passos
-
-1. **Crie a estrutura de pastas** conforme o diagrama
-2. **Copie o código Python** para `src/chatbot_rag.py`
-3. **Crie os arquivos de configuração** (requirements.txt, .gitignore, README.md)
-4. **Execute a instalação**
-5. **Adicione documentos** e teste o chatbot
-
----
-
-## 💡 Dicas de Uso
-
-- **Documentos menores** = respostas mais rápidas
-- **Perguntas específicas** = respostas mais precisas
-- **Múltiplos arquivos** = contexto mais rico
-- **Organize por tema** = melhor organização
+**Versão**: 1.0.0  
+**Última atualização**: Outubro 2025

@@ -4,11 +4,13 @@ from typing import List
 import requests
 import warnings
 
-# Suprimir avisos do NLTK
+# Suprimir avisos
 warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', message='.*punkt_tab.*')
+warnings.filterwarnings('ignore', message='.*validate_default.*')
+warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
 
-# llama-index 0.12.x (nova estrutura de imports)
+# llama-index 0.11.x (estrutura compatível)
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.faiss import FaissVectorStore
@@ -20,8 +22,15 @@ from pypdf import PdfReader
 
 DEFAULT_DOCUMENTS_FOLDER = "documentos"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-OLLAMA_MODEL_NAME = "deepseek-coder"
+OLLAMA_MODEL_NAME = "llama3.2:3b"  # Modelo mais rápido (antes: deepseek-coder)
 EXIT_COMMANDS = ["sair", "exit", "quit"]
+
+# Configurações de otimização (ajustadas para melhor precisão)
+CHUNK_SIZE = 512  # Aumentado de 256 para capturar mais contexto
+CHUNK_OVERLAP = 50  # Aumentado de 25 para melhor continuidade
+SIMILARITY_TOP_K = 5  # Aumentado de 2 para recuperar mais chunks relevantes
+MAX_TOKENS = 1024  # Aumentado de 512 para respostas mais completas
+FAISS_INDEX_DIR = "./storage"  # Diretório para persistir índice
 
 def check_ollama_running():
     """Verifica se o Ollama está rodando."""
@@ -84,30 +93,84 @@ def create_faiss_vector_store(embedding_dim: int = 384):
 def setup_rag_system(documents_folder: str = DEFAULT_DOCUMENTS_FOLDER):
     """Configura o sistema RAG completo."""
     print("📦 Configurando RAG...")
+    
+    # Verifica se existe índice salvo
+    if Path(FAISS_INDEX_DIR).exists():
+        print("🔄 Carregando índice existente...")
+        try:
+            from llama_index.core import load_index_from_storage
+            
+            # Configurar embeddings e LLM antes de carregar
+            embed_model = HuggingFaceEmbedding(
+                model_name=EMBEDDING_MODEL_NAME,
+                cache_folder="./.cache/embeddings"
+            )
+            
+            llm = Ollama(
+                model=OLLAMA_MODEL_NAME, 
+                request_timeout=60.0,
+                temperature=0.1,
+                additional_kwargs={
+                    "num_predict": MAX_TOKENS,
+                    "num_ctx": 2048,
+                },
+                system_prompt="""
+Você é um assistente que responde **somente em português**, de forma clara, objetiva e direta.
+Seja conciso. Não escreva em outro idioma.
+Responda com base nas informações fornecidas.
+Use exemplos práticos quando possível.
+                """
+            )
+            
+            Settings.llm = llm
+            Settings.embed_model = embed_model
+            Settings.chunk_size = CHUNK_SIZE
+            Settings.chunk_overlap = CHUNK_OVERLAP
+            
+            storage_context = StorageContext.from_defaults(persist_dir=FAISS_INDEX_DIR)
+            index = load_index_from_storage(storage_context)
+            
+            query_engine = index.as_query_engine(
+                similarity_top_k=SIMILARITY_TOP_K,
+                streaming=False,
+                response_mode="compact"
+            )
+            print("✅ Índice carregado com sucesso!")
+            return query_engine
+        except Exception as e:
+            print(f"⚠️  Erro ao carregar índice: {e}")
+            print("🔄 Criando novo índice...")
+    
+    # Criar novo índice
     documents = load_documents(documents_folder)
 
     print("🔧 Configurando embeddings...")
-    embed_model = HuggingFaceEmbedding(model_name=EMBEDDING_MODEL_NAME)
+    embed_model = HuggingFaceEmbedding(
+        model_name=EMBEDDING_MODEL_NAME,
+        cache_folder="./.cache/embeddings"
+    )
 
     print("🔧 Configurando LLM (Ollama)...")
     llm = Ollama(
         model=OLLAMA_MODEL_NAME, 
-        request_timeout=120.0, 
+        request_timeout=60.0,
         temperature=0.1,
+        additional_kwargs={
+            "num_predict": MAX_TOKENS,
+            "num_ctx": 2048,
+        },
         system_prompt="""
 Você é um assistente que responde **somente em português**, de forma clara, objetiva e direta.
-Não escreva em outro idioma.
-Não peça mais contexto — sempre responda com base nas informações fornecidas.
-Sempre explique com exemplos práticos quando possível.
-Evite respostas vagas ou genéricas.
+Seja conciso. Não escreva em outro idioma.
+Responda com base nas informações fornecidas.
+Use exemplos práticos quando possível.
         """
     )
 
-    # Configuração global do LlamaIndex 0.12.x (substitui ServiceContext)
     Settings.llm = llm
     Settings.embed_model = embed_model
-    Settings.chunk_size = 512
-    Settings.chunk_overlap = 50
+    Settings.chunk_size = CHUNK_SIZE
+    Settings.chunk_overlap = CHUNK_OVERLAP
 
     print("🔧 Configurando FAISS...")
     vector_store = create_faiss_vector_store(embedding_dim=384)
@@ -120,8 +183,16 @@ Evite respostas vagas ou genéricas.
         show_progress=True
     )
 
-    query_engine = index.as_query_engine(similarity_top_k=3, streaming=False)
-    print("✅ Sistema RAG configurado!")
+    # Salvar índice para uso futuro
+    print("💾 Salvando índice...")
+    index.storage_context.persist(persist_dir=FAISS_INDEX_DIR)
+
+    query_engine = index.as_query_engine(
+        similarity_top_k=SIMILARITY_TOP_K,
+        streaming=False,
+        response_mode="compact"
+    )
+    print("✅ Sistema RAG configurado e salvo!")
     return query_engine
 
 def run_chat_loop(query_engine):
@@ -130,6 +201,8 @@ def run_chat_loop(query_engine):
     print("🤖 Chatbot RAG — digite sua pergunta")
     print("Digite 'sair' para encerrar.")
     print("="*40 + "\n")
+    
+    import time
     
     while True:
         try:
@@ -141,8 +214,13 @@ def run_chat_loop(query_engine):
                 break
             
             print("🔍 Processando...")
+            start_time = time.time()
+            
             resposta = query_engine.query(pergunta)
-            print(f"\n🤖 Bot: {resposta}\n")
+            
+            elapsed = time.time() - start_time
+            print(f"\n🤖 Bot: {resposta}")
+            print(f"⏱️  Tempo: {elapsed:.2f}s\n")
         except KeyboardInterrupt:
             print("\n👋 Interrompido pelo usuário.")
             break
@@ -151,11 +229,32 @@ def run_chat_loop(query_engine):
 
 def main():
     """Função principal."""
+    print("="*60)
+    print("🤖 RAG Chatbot - Inicializando...")
+    print("="*60 + "\n")
+    
+    # Verifica se o modelo está disponível
+    print(f"📋 Verificando modelo: {OLLAMA_MODEL_NAME}")
     if not check_ollama_running():
         print("❌ Ollama não está rodando. Rode: `ollama serve`")
         sys.exit(1)
-    else:
-        print("✅ Ollama rodando (checado /api/tags)")
+    
+    # Verifica se o modelo está instalado
+    try:
+        import ollama
+        models = ollama.list()
+        model_names = [m['name'] for m in models.get('models', [])]
+        
+        if not any(OLLAMA_MODEL_NAME in name for name in model_names):
+            print(f"⚠️  Modelo '{OLLAMA_MODEL_NAME}' não encontrado.")
+            print(f"📥 Baixando modelo... (isso pode levar alguns minutos)")
+            ollama.pull(OLLAMA_MODEL_NAME)
+            print(f"✅ Modelo '{OLLAMA_MODEL_NAME}' baixado!")
+        else:
+            print(f"✅ Modelo '{OLLAMA_MODEL_NAME}' disponível!")
+    except Exception as e:
+        print(f"⚠️  Não foi possível verificar modelo: {e}")
+        print("   Continuando mesmo assim...")
 
     try:
         query_engine = setup_rag_system()

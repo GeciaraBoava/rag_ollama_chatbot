@@ -10,8 +10,9 @@ VENV_DIR = os.path.join(BASE_DIR, ".venv")
 REQUIREMENTS_FILE = os.path.join(BASE_DIR, "requirements.txt")
 MAIN_SCRIPT = os.path.join(BASE_DIR, "src", "main.py")
 
-# Pasta onde o FAISS salva os índices
-FAISS_INDEX_DIR = os.path.join(BASE_DIR, "faiss_index")
+# Pastas de cache e índices
+FAISS_INDEX_DIR = os.path.join(BASE_DIR, "storage")
+CACHE_DIR = os.path.join(BASE_DIR, ".cache")
 
 
 def create_virtualenv():
@@ -62,6 +63,7 @@ def check_ollama():
     check_code = """
 import requests
 try:
+    # Endpoint correto: /api/tags (não /api/models)
     response = requests.get('http://localhost:11434/api/tags', timeout=5)
     if response.status_code == 200:
         exit(0)
@@ -127,12 +129,21 @@ def start_ollama():
 
 def rebuild_faiss_index():
     """Apaga o índice FAISS antigo, se existir."""
+    deleted = False
     if os.path.exists(FAISS_INDEX_DIR):
         print("🗑️  Removendo índice FAISS antigo...")
         shutil.rmtree(FAISS_INDEX_DIR)
-        print("✅ Índice antigo removido.")
+        deleted = True
+    
+    if os.path.exists(CACHE_DIR):
+        print("🗑️  Removendo cache de embeddings...")
+        shutil.rmtree(CACHE_DIR)
+        deleted = True
+    
+    if deleted:
+        print("✅ Índice e cache removidos.")
     else:
-        print("ℹ️  Nenhum índice FAISS antigo encontrado.")
+        print("ℹ️  Nenhum índice ou cache encontrado.")
 
 
 def check_python_version():
@@ -182,7 +193,9 @@ def main():
 
     # Verifica se Ollama está rodando
     print("\n🔍 Verificando Ollama...")
-    if not check_ollama():
+    if check_ollama():
+        print("✅ Ollama está rodando corretamente.")
+    else:
         print("⚠️  Ollama não está ativo.")
         
         # Tenta iniciar automaticamente
