@@ -127,6 +127,30 @@ def start_ollama():
         return False
 
 
+def check_cache_status():
+    """Verifica o status do cache e índice."""
+    print("\n📊 Status do Cache e Índice")
+    print("="*60)
+    
+    if os.path.exists(FAISS_INDEX_DIR):
+        # Conta arquivos no índice
+        index_files = len([f for f in os.listdir(FAISS_INDEX_DIR) if os.path.isfile(os.path.join(FAISS_INDEX_DIR, f))])
+        index_size = sum(os.path.getsize(os.path.join(FAISS_INDEX_DIR, f)) for f in os.listdir(FAISS_INDEX_DIR) if os.path.isfile(os.path.join(FAISS_INDEX_DIR, f)))
+        print(f"✅ Índice FAISS encontrado: {index_files} arquivo(s), {index_size / (1024*1024):.2f} MB")
+    else:
+        print("⚠️  Índice FAISS não encontrado (será criado na primeira execução)")
+    
+    if os.path.exists(CACHE_DIR):
+        cache_size = sum(os.path.getsize(os.path.join(dirpath, f)) 
+                        for dirpath, _, filenames in os.walk(CACHE_DIR) 
+                        for f in filenames)
+        print(f"✅ Cache de embeddings: {cache_size / (1024*1024):.2f} MB")
+    else:
+        print("⚠️  Cache de embeddings não encontrado")
+    
+    print("="*60 + "\n")
+
+
 def rebuild_faiss_index():
     """Apaga o índice FAISS antigo, se existir."""
     deleted = False
@@ -179,10 +203,16 @@ def run_main():
 
 def main():
     rebuild_flag = "--rebuild" in sys.argv
+    status_flag = "--status" in sys.argv
 
     print("="*60)
     print("🚀 Inicializando ambiente RAG Chatbot")
     print("="*60 + "\n")
+
+    # Se for apenas para ver status
+    if status_flag:
+        check_cache_status()
+        sys.exit(0)
 
     check_python_version()
     create_virtualenv()
@@ -190,6 +220,8 @@ def main():
 
     if rebuild_flag:
         rebuild_faiss_index()
+    else:
+        check_cache_status()
 
     # Verifica se Ollama está rodando
     print("\n🔍 Verificando Ollama...")

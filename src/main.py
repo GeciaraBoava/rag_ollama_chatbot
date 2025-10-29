@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 from typing import List
 import requests
@@ -9,6 +10,11 @@ warnings.filterwarnings('ignore', category=DeprecationWarning)
 warnings.filterwarnings('ignore', message='.*punkt_tab.*')
 warnings.filterwarnings('ignore', message='.*validate_default.*')
 warnings.filterwarnings('ignore', category=UserWarning, module='pydantic')
+warnings.filterwarnings('ignore', message='.*symlinks.*')
+warnings.filterwarnings('ignore', category=UserWarning, module='huggingface_hub')
+
+# Desabilitar warning de symlinks do HuggingFace
+os.environ['HF_HUB_DISABLE_SYMLINKS_WARNING'] = '1'
 
 # llama-index 0.11.x (estrutura compatível)
 from llama_index.core import Document, VectorStoreIndex, Settings, StorageContext
@@ -22,15 +28,19 @@ from pypdf import PdfReader
 
 DEFAULT_DOCUMENTS_FOLDER = "documentos"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-OLLAMA_MODEL_NAME = "llama3.2:3b"  # Modelo mais rápido (antes: deepseek-coder)
+OLLAMA_MODEL_NAME = "llama3.2:3b"  # Modelo mais rápido
 EXIT_COMMANDS = ["sair", "exit", "quit"]
 
-# Configurações de otimização (ajustadas para melhor precisão)
-CHUNK_SIZE = 512  # Aumentado de 256 para capturar mais contexto
-CHUNK_OVERLAP = 50  # Aumentado de 25 para melhor continuidade
-SIMILARITY_TOP_K = 5  # Aumentado de 2 para recuperar mais chunks relevantes
-MAX_TOKENS = 1024  # Aumentado de 512 para respostas mais completas
+# Configurações otimizadas para velocidade + precisão
+CHUNK_SIZE = 512  # Captura contexto suficiente
+CHUNK_OVERLAP = 50  # Boa continuidade
+SIMILARITY_TOP_K = 4  # Reduzido de 5 para 4 (menos contexto = mais rápido)
+MAX_TOKENS = 800  # Reduzido de 1024 (respostas mais diretas)
+NUM_CTX = 3072  # Reduzido de 4096 (menos contexto = mais rápido)
 FAISS_INDEX_DIR = "./storage"  # Diretório para persistir índice
+SYSTEM_PROMPT = """Responda em português de forma direta e objetiva.
+Liste todos os itens mencionados no contexto.
+Seja breve e preciso."""
 
 def check_ollama_running():
     """Verifica se o Ollama está rodando."""
@@ -38,6 +48,22 @@ def check_ollama_running():
         resp = requests.get("http://localhost:11434/api/tags", timeout=5)
         return resp.status_code == 200
     except Exception:
+        return False
+
+
+def check_gpu_available():
+    """Verifica se GPU está disponível."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            print(f"🎮 GPU detectada: {gpu_name}")
+            return True
+        else:
+            print("💻 Usando CPU (sem GPU detectada)")
+            return False
+    except Exception:
+        print("💻 Usando CPU")
         return False
 
 def load_documents(folder_path: str) -> List[Document]:
@@ -109,17 +135,13 @@ def setup_rag_system(documents_folder: str = DEFAULT_DOCUMENTS_FOLDER):
             llm = Ollama(
                 model=OLLAMA_MODEL_NAME, 
                 request_timeout=60.0,
-                temperature=0.1,
+                temperature=0.0,  # Zero para respostas mais diretas
                 additional_kwargs={
                     "num_predict": MAX_TOKENS,
-                    "num_ctx": 2048,
+                    "num_ctx": NUM_CTX,
+                    "num_thread": 8,  # Usar múltiplas threads
                 },
-                system_prompt="""
-Você é um assistente que responde **somente em português**, de forma clara, objetiva e direta.
-Seja conciso. Não escreva em outro idioma.
-Responda com base nas informações fornecidas.
-Use exemplos práticos quando possível.
-                """
+                system_prompt = SYSTEM_PROMPT
             )
             
             Settings.llm = llm
@@ -154,17 +176,13 @@ Use exemplos práticos quando possível.
     llm = Ollama(
         model=OLLAMA_MODEL_NAME, 
         request_timeout=60.0,
-        temperature=0.1,
+        temperature=0.0,  # Zero para respostas mais diretas
         additional_kwargs={
             "num_predict": MAX_TOKENS,
-            "num_ctx": 2048,
+            "num_ctx": NUM_CTX,
+            "num_thread": 8,  # Usar múltiplas threads
         },
-        system_prompt="""
-Você é um assistente que responde **somente em português**, de forma clara, objetiva e direta.
-Seja conciso. Não escreva em outro idioma.
-Responda com base nas informações fornecidas.
-Use exemplos práticos quando possível.
-        """
+        system_prompt = SYSTEM_PROMPT
     )
 
     Settings.llm = llm
@@ -190,7 +208,7 @@ Use exemplos práticos quando possível.
     query_engine = index.as_query_engine(
         similarity_top_k=SIMILARITY_TOP_K,
         streaming=False,
-        response_mode="compact"
+        response_mode="compact"  # Compact é mais rápido que tree_summarize
     )
     print("✅ Sistema RAG configurado e salvo!")
     return query_engine
